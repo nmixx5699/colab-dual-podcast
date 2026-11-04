@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv*/
+.env
+.runtime.json
+*.log
+outputs/
+runs/
+cache/
+models/
+ComfyUI/
+*.safetensors
+*.mp4
+*.wav
+.ipynb_checkpoints/

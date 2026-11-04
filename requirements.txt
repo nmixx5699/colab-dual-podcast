@@ -1,0 +1,7 @@
+# CPU orchestration/test dependencies. GPU installs are isolated by scripts/setup_colab.py.
+numpy>=1.26,<3
+Pillow>=10.1,<13
+soundfile>=0.12,<1
+requests>=2.32,<3
+huggingface-hub>=0.34,<2
+pytest>=8,<10

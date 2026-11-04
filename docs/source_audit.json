@@ -1,0 +1,59 @@
+{
+  "source_audit": "passed",
+  "comfy_commit": "426f5eea52a7ece1dd599fff4cb6cd1f352ddd24",
+  "nodes_checked": [
+    "AudioEncoderEncode",
+    "AudioEncoderLoader",
+    "BasicScheduler",
+    "CFGGuider",
+    "CLIPLoader",
+    "CLIPTextEncode",
+    "ConditioningZeroOut",
+    "CreateVideo",
+    "ImageBatch",
+    "ImageFromBatch",
+    "KSamplerSelect",
+    "LoadAudio",
+    "LoadImage",
+    "LoadImageMask",
+    "LoraLoaderModelOnly",
+    "ModelPatchLoader",
+    "PodcastInfiniteTalkToVideo",
+    "RandomNoise",
+    "SamplerCustomAdvanced",
+    "SaveImage",
+    "SaveVideo",
+    "UNETLoader",
+    "VAEDecode",
+    "VAELoader"
+  ],
+  "tts_parameters": [
+    "self",
+    "text",
+    "prompt_wav_path",
+    "prompt_text",
+    "reference_wav_path",
+    "cfg_value",
+    "inference_timesteps",
+    "min_len",
+    "max_len",
+    "normalize",
+    "denoise",
+    "retry_badcase",
+    "retry_badcase_max_times",
+    "retry_badcase_ratio_threshold",
+    "streaming",
+    "seed"
+  ],
+  "dynamic_inputs": [
+    "mode.audio_encoder_output_2",
+    "mode.mask_1",
+    "mode.mask_2"
+  ],
+  "derivative_changes": [
+    "independent class/node id",
+    "parallel audio instead of concatenation"
+  ],
+  "runtime_object_info_validation": "performed in Colab before each prompt; NOT executed by this audit",
+  "gpu_inference": "NOT TESTED"
+}

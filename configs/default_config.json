@@ -1,0 +1,13 @@
+{
+  "width": 832,
+  "height": 480,
+  "fps": 25,
+  "chunk_frames": 81,
+  "motion_frames": 9,
+  "steps": 6,
+  "seed": 42,
+  "pause_sec": 0.3,
+  "max_duration_sec": 10,
+  "segment_timeout_sec": 7200,
+  "prompt": "A locked-off medium wide shot of two fictional podcast hosts seated together, host A on the left and host B on the right. Both remain visible in the same frame throughout, upper bodies visible, unobstructed faces and mouths, microphones below mouth level. Taking turns speaking, the listening host keeps their mouth closed. Subtle natural blinking, small nods and gentle head motion. Consistent faces, clothing, lighting and background, no cuts, no camera movement."
+}
