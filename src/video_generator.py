@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 import shutil
+import time
 import numpy as np
 import soundfile as sf
 from .audio_timeline import segment_plan, audio_window
@@ -80,6 +81,7 @@ def generate(client, config, inputs_dir, audio_dir, output_dir):
             write_json(output_dir / 'object_info.json', info)
             validate_graph(graph, info)
             write_json(folder / 'workflow.json', graph)
+            started = time.monotonic()
             try:
                 outputs = client.generate(graph, folder / 'history.json', timeout=config['segment_timeout_sec'])
                 raw_items = outputs[save_id].get('images', [])
@@ -101,6 +103,18 @@ def generate(client, config, inputs_dir, audio_dir, output_dir):
             shutil.copy2(folder / f'motion_{j:02d}.png', target / name)
             previous.append(name)
         videos.append(folder / 'clip.mp4')
-        # cache-none prevents old decoded frames accumulating across segments.
-        client.post('/free', {'unload_models': False, 'free_memory': True})
+        # Keep completed checkpoint even if optional cleanup fails.
+        if config.get('free_memory_between_segments', True):
+            try:
+                client.post('/free', {'unload_models': config.get('unload_models_between_segments', False), 'free_memory': True})
+            except Exception:
+                logging.exception('ComfyUI cleanup failed; completed segment remains valid')
+        try:
+            stats = run(['nvidia-smi', '--query-gpu=memory.used', '--format=csv,noheader,nounits']).stdout.strip()
+        except (OSError, RuntimeError):
+            stats = None
+        if not chain_valid:
+            write_json(folder / 'metrics.json', {'gpu_memory_mib_after_cleanup': stats,
+                       'generation_sec': time.monotonic() - started})
     return merge_segments(videos, audio_dir / 'mix.wav', output_dir / 'podcast.mp4', duration)
+

@@ -3,27 +3,49 @@ from pathlib import Path
 import subprocess
 import time
 import requests
+import logging
 
 
 class ComfyClient:
-    def __init__(self, root, python, log_path, low_vram=False):
+    def __init__(self, root, python, log_path, low_vram=False, cache_strategy="disabled", idle_timeout=1800):
+        if cache_strategy not in ("default", "disabled", "low-memory"):
+            raise ValueError("Unknown cache strategy")
+        self.cache_strategy, self.idle_timeout = cache_strategy, idle_timeout
         self.root = Path(root)
         self.python, self.log_path, self.low_vram = str(python), Path(log_path), low_vram
         self.url = 'http://127.0.0.1:8188'
         self.process = self.log = None
 
+    @staticmethod
+    def decode(response, route):
+        if not response.ok:
+            raise RuntimeError(f'ComfyUI {route}: HTTP {response.status_code} {response.text[:4000]}')
+        if not response.text.strip():
+            return {}
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise RuntimeError(f'ComfyUI API protocol error {route}: HTTP {response.status_code}, non-JSON body {response.text[:1000]}') from exc
+
     def get(self, route):
-        response = requests.get(self.url + route, timeout=30)
-        response.raise_for_status()
-        return response.json()
+        return self.decode(requests.get(self.url + route, timeout=30), route)
 
     def post(self, route, data):
-        response = requests.post(self.url + route, json=data, timeout=60)
-        if not response.ok:
-            raise RuntimeError(f'ComfyUI {route}: {response.status_code} {response.text[:4000]}')
-        return response.json()
+        return self.decode(requests.post(self.url + route, json=data, timeout=60), route)
+
+    def cache_args(self):
+        # Audited ComfyUI v0.43.0 comfy/cli_args.py.
+        return {'default': [], 'disabled': ['--cache-none'],
+                'low-memory': ['--cache-lru', '1']}[self.cache_strategy]
 
     def start(self):
+        try:
+            return self._start()
+        except BaseException:
+            self.close()
+            raise
+
+    def _start(self):
         try:
             self.get('/system_stats')
         except requests.RequestException:
@@ -32,7 +54,7 @@ class ComfyClient:
             raise RuntimeError('Port 8188 already occupied. Stop the previous notebook server or restart runtime.')
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.log = self.log_path.open('a', encoding='utf-8')
-        args = [self.python, 'main.py', '--listen', '127.0.0.1', '--port', '8188', '--cache-none']
+        args = [self.python, 'main.py', '--listen', '127.0.0.1', '--port', '8188'] + self.cache_args()
         if self.low_vram:
             args.append('--novram')
         self.process = subprocess.Popen(args, cwd=self.root, stdout=self.log, stderr=subprocess.STDOUT)
@@ -48,20 +70,47 @@ class ComfyClient:
         raise TimeoutError(f'ComfyUI startup timeout: {self.log_path}')
 
     def generate(self, graph, checkpoint, timeout=7200):
+        offset = self.log_path.stat().st_size if self.log_path.exists() else 0
+        try:
+            return self._generate(graph, checkpoint, timeout)
+        except BaseException as exc:
+            logging.exception('ComfyUI generation stopped; checkpoints retained')
+            self.close()
+            if 'cuda out of memory' in str(exc).lower() or 'torch.outofmemoryerror' in str(exc).lower():
+                print('CUDA OOM: server stopped. Retry with LOW_VRAM=True and the same RUN_NAME; completed checkpoints are retained.')
+            raise
+        finally:
+            # Preserve this prompt's model loading / sampling log evidence separately.
+            if self.log_path.exists():
+                with self.log_path.open('rb') as source:
+                    source.seek(offset)
+                    try:
+                        Path(checkpoint).with_name('comfy-segment.log').write_bytes(source.read())
+                    except OSError:
+                        logging.exception('Could not save segment log excerpt; see original ComfyUI log')
+
+    def _generate(self, graph, checkpoint, timeout=7200):
         from .common import write_json
         checkpoint = Path(checkpoint)
         prompt_id = self.post('/prompt', {'prompt': graph})['prompt_id']
         write_json(checkpoint, {'prompt_id': prompt_id, 'state': 'submitted'})
         start, last = time.monotonic(), 0
+        progress_time, log_size = start, self.log_path.stat().st_size if self.log_path.exists() else 0
         while time.monotonic() - start < timeout:
             if self.process and self.process.poll() is not None:
                 raise RuntimeError(f'ComfyUI terminated (possible OOM). See {self.log_path}')
+            size = self.log_path.stat().st_size if self.log_path.exists() else 0
+            if size != log_size:
+                progress_time, log_size = time.monotonic(), size
+            if self.idle_timeout and time.monotonic() - progress_time > self.idle_timeout:
+                raise TimeoutError(f'No ComfyUI log progress for {self.idle_timeout}s; see {self.log_path}')
             history = self.get(f'/history/{prompt_id}')
             if prompt_id in history:
                 record = history[prompt_id]
                 write_json(checkpoint, record)
                 if record.get('status', {}).get('status_str') == 'error':
                     raise RuntimeError(json.dumps(record['status'].get('messages'), ensure_ascii=False))
+                write_json(checkpoint.with_name('timing.json'), {'total_sec': time.monotonic() - start, 'cache_strategy': self.cache_strategy, 'low_vram': self.low_vram, 'history_messages': record.get('status', {}).get('messages', [])})
                 return record['outputs']
             if time.monotonic() - last > 30:
                 last = time.monotonic()
@@ -89,3 +138,4 @@ class ComfyClient:
                 self.process.wait(timeout=10)
         if self.log:
             self.log.close()
+

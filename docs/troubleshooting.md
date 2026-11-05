@@ -2,7 +2,7 @@
 
 | 問題 | 處理 |
 |---|---|
-| GitHub／Colab 404 | 私人倉庫需對應帳號授權；可下載 ZIP 和 Notebook 後上傳 Colab。 |
+| GitHub／Colab 404 | 確認倉庫為 Public、PROJECT_REF 存在；可預先上傳 ZIP 並設定 SOURCE=zip，不需 Token。 |
 | 沒有 L4／A100 | 在 Colab 更改 runtime，確認取得的 GPU；本機小顯存卡無法替代 GPU 驗證。 |
 | OOM／程序退出 | 停止目前 server、LOW_VRAM=True、先做 5 秒，改用 A100；查看 comfyui.log 與系統 RAM，不能保證 L4 成功。 |
 | 安裝相依衝突 | 查 setup.log 與 cache/*-pip-freeze.txt。TTS／Comfy 已分 venv；Colab PyTorch 與間接套件仍會變動，請保留紀錄回報。 |
@@ -18,3 +18,15 @@
 | MP4 未下載 | 從 RUN_DIR/video/podcast.mp4 手動下載；先確認檔案存在。 |
 
 如 ComfyUI 在片段生成中斷線，該段尚未驗證的輸出不會當成完成；已完成段保留。重試時伺服器會重新生成未完成段。
+
+
+## v0.2.0
+
+- ensurepip 缺失：安裝器依目前版本安裝 pythonX.Y-venv，支援 3.12/3.13；apt 找不到對應套件時會明確回報套件名稱與 stderr。未實測 Colab 3.13.16 apt 安裝，不會偷偷改用 3.12。
+- 重跑 venv：無 pip、版本錯誤或 `.creating` 殘留會將該 venv 隔離成 `.failed-*`，重新建立；不碰模型快取。
+- checksum 錯誤：單一壞模型隔離成 `.corrupt-*`，有限重下載；不要刪除整個 Drive/HF。大檔 SHA-256 校驗讀取 Drive 可能較慢。
+- L4 OOM：伺服器停止後改 LOW_VRAM=True，使用相同設定與 RUN_NAME 重跑。只有清楚 CUDA OOM 會提示此路徑，其他錯誤請讀 logs。
+- 無進度：預設 1800 秒無日誌變化超時、7200 秒總超時，皆可調整。無日誌不一定等於 GPU 沒運算；L4 仍待校準，可提高 idle_timeout_sec 或設 0 關閉。
+- 字幕方塊：安裝中文字型或設定 SUBTITLE_FONTS_DIR；FFmpeg 需支援 libass。原始 MP4 不受字幕後製失敗影響。
+- 字幕過多行：縮短對話句子，或編輯產出的 SRT；目前每句整段顯示，不宣稱逐字精準對齊。
+- GPU 計費：任何錯誤或手動中止後，請至 Colab 執行階段選單中斷連線並刪除 runtime。Notebook 不會自行操作帳號設定。

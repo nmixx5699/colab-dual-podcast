@@ -9,5 +9,9 @@
   "pause_sec": 0.3,
   "max_duration_sec": 10,
   "segment_timeout_sec": 7200,
-  "prompt": "A locked-off medium wide shot of two fictional podcast hosts seated together, host A on the left and host B on the right. Both remain visible in the same frame throughout, upper bodies visible, unobstructed faces and mouths, microphones below mouth level. Taking turns speaking, the listening host keeps their mouth closed. Subtle natural blinking, small nods and gentle head motion. Consistent faces, clothing, lighting and background, no cuts, no camera movement."
+  "prompt": "A locked-off medium wide shot of two fictional podcast hosts seated together, host A on the left and host B on the right. Both remain visible in the same frame throughout, upper bodies visible, unobstructed faces and mouths, microphones below mouth level. Taking turns speaking, the listening host keeps their mouth closed. Subtle natural blinking, small nods and gentle head motion. Consistent faces, clothing, lighting and background, no cuts, no camera movement.",
+  "idle_timeout_sec": 1800,
+  "cache_strategy": "disabled",
+  "free_memory_between_segments": true,
+  "unload_models_between_segments": false
 }

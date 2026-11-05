@@ -8,7 +8,8 @@ from src.common import ffmpeg, run
 from src.video_merge import trim_segment, merge_segments
 
 
-def test_ffmpeg_trim_concat_and_audio_duration(tmp_path, monkeypatch):
+@pytest.mark.parametrize('width,height', [(64,48), (832,480), (480,832)])
+def test_ffmpeg_trim_concat_and_audio_duration(tmp_path, monkeypatch, width, height):
     if not shutil.which('ffmpeg'):
         try:
             import imageio_ffmpeg
@@ -18,7 +19,7 @@ def test_ffmpeg_trim_concat_and_audio_duration(tmp_path, monkeypatch):
     clips = []
     for i, color in enumerate(('red', 'blue')):
         raw, clip = tmp_path / f'raw{i}.mp4', tmp_path / f'clip{i}.mp4'
-        run([ffmpeg(), '-v', 'error', '-y', '-f', 'lavfi', '-i', f'color=c={color}:s=64x48:r=25',
+        run([ffmpeg(), '-v', 'error', '-y', '-f', 'lavfi', '-i', f'color=c={color}:s={width}x{height}:r=25',
              '-frames:v', '81', '-c:v', 'libx264', raw])
         trim_segment(raw, clip, 0 if i == 0 else 9, 81 if i == 0 else 44)
         clips.append(clip)
@@ -30,8 +31,8 @@ def test_ffmpeg_trim_concat_and_audio_duration(tmp_path, monkeypatch):
     import subprocess
     frames = subprocess.run([ffmpeg(), '-v', 'error', '-i', str(result), '-map', '0:v:0',
                              '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
-    assert len(frames) == 125 * 64 * 48 * 3
-    pixels = np.frombuffer(frames, np.uint8).reshape(125, 48, 64, 3)
+    assert len(frames) == 125 * width * height * 3
+    pixels = np.frombuffer(frames, np.uint8).reshape(125, height, width, 3)
     assert pixels[80, :, :, 0].mean() > 200
     assert pixels[81, :, :, 2].mean() > 200
     audio = tmp_path / 'decoded.wav'
@@ -39,3 +40,4 @@ def test_ffmpeg_trim_concat_and_audio_duration(tmp_path, monkeypatch):
     samples, sr = sf.read(audio)
     assert abs(len(samples) / sr - 5) < 0.07  # AAC packet padding
     assert np.max(np.abs(samples)) > 0.1
+

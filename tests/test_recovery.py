@@ -11,7 +11,8 @@ from src.comfy_workflow import ROOT
 from src.video_generator import generate
 
 
-def test_failed_second_segment_resumes_and_stages_inputs(tmp_path, monkeypatch):
+@pytest.mark.parametrize('cleanup_bad', [False, True])
+def test_failed_second_segment_resumes_and_stages_inputs(tmp_path, monkeypatch, cleanup_bad):
     if not shutil.which('ffmpeg'):
         try:
             import imageio_ffmpeg
@@ -42,7 +43,12 @@ def test_failed_second_segment_resumes_and_stages_inputs(tmp_path, monkeypatch):
             return {}
 
         def post(self, *args):
-            return {}
+            from src.comfy_client import ComfyClient
+            import requests
+            response = requests.Response()
+            response.status_code = 200
+            response._content = b'non-json' if cleanup_bad else b''
+            return ComfyClient.decode(response, '/free')
 
         def output_file(self, item):
             return self.root / 'output' / item['filename']
@@ -86,3 +92,4 @@ def test_failed_second_segment_resumes_and_stages_inputs(tmp_path, monkeypatch):
     (output / 'segment_000/clip.mp4').write_bytes(b'corrupt')
     generate(client, cfg, inputs, audio, output)
     assert client.calls == 5  # corruption invalidated the dependent motion chain
+
