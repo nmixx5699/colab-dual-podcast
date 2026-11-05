@@ -1,4 +1,4 @@
-# colab-dual-podcast
+# colab-dual-podcast — v0.2.0
 
 AI Two-Person Podcast Video Generator powered by Google Colab, VoxCPM2, Wan2.1 and InfiniteTalk Multi.
 
@@ -9,11 +9,11 @@ AI Two-Person Podcast Video Generator powered by Google Colab, VoxCPM2, Wan2.1 a
 
 ## 開始使用
 
-1. 在私人 GitHub 倉庫登入後，下載 `Code → Download ZIP`。開啟上方 Colab 連結；若無法讀取私人倉庫，將 `podcast_dual.ipynb` 上傳到 Colab。
-2. 選 A100 40GB（主要建議測試環境）或 L4 24GB（低顯存測試）。Notebook 會自動檢測 GPU，L4 預設 `--novram`。兩者容量／速度均尚待本專案實測。
-3. 第一格上傳完整專案 ZIP。私人 repo 無法匿名 clone，因此不用將 GitHub token 寫進 Notebook。
+1. 開啟 Colab Notebook，第一格預設從公開 GitHub 固定 SHA 下載完整專案，不需 Token；可選 main 或預先上傳 ZIP 作備用。
+2. 選 A100 40GB（主要建議測試環境）或 L4 24GB（低顯存測試）。Notebook 會自動檢測 GPU，L4 與 A100 預設正常模式；可手動設定 `LOW_VRAM=True` 使用 `--novram`。兩者容量／速度均尚待本專案實測。
+3. 執行前從 Colab 左側檔案上傳 hosts.png 與自備參考音；不會在「全部執行」時彈出上傳對話。ZIP 備用方式見操作指南。
 4. 上傳 `hosts.png`：兩位虛構主持人 A 左、B 右，上半身入鏡、正面清晰，麥克風低於嘴部。預設輸出 832×480，以留邊縮放保留兩人，不裁臉。
-5. 修改②的 `DIALOGUE`、`VOICES`，先保留 `STAGE_LIMIT_SEC=5`。檢查③的紅色 A／藍色 B 遮罩預覽，再往下安裝、配音、生成。
+5. 修改②的 `DIALOGUE`、`VOICES`，先保留 `MAX_ALLOWED_DURATION_SEC=5`。檢查③的紅色 A／藍色 B 遮罩預覽，再往下安裝、配音、生成。
 6. 預覽⑦的 MP4 並下載。看過實際嘴型、人物與接縫後，才在⑧填寫人工驗收紀錄。
 
 ```python
@@ -48,7 +48,7 @@ VOICES = {
 
 ## 30–60 秒流程
 
-先人工確認 5 秒，再換 `RUN_NAME` 測 10–15 秒，最後加長對話並設定 `STAGE_LIMIT_SEC=30` 或 `60`。
+先人工確認 5 秒，再換 `RUN_NAME` 測 10–15 秒，最後加長對話並設定 `MAX_ALLOWED_DURATION_SEC=30` 或 `60`。
 實際長度由 TTS 決定；上限不是強制輸出長度，也不會截斷超長語句。
 每個續接片段新增 72 幀；30 秒約 11 段，60 秒約 21 段。
 長片段會增加運算與儲存成本；不保證 L4 可完成，也不宣稱自然互動或無漂移。
@@ -77,3 +77,13 @@ python -m scripts.audit_upstream --comfy /path/to/ComfyUI-v0.43.0 --vox /path/to
 本專案以 **GPL-3.0-only** 發布，因包含 ComfyUI 衍生節點；完整原始碼隨倉庫提供。
 參考專案的 MIT 聲明保留在 `licenses/colab-talking-avatar-MIT.txt`。
 模型權重不隨倉庫發佈，各自遵守其來源授權；Kijai VAE／LoRA 轉換檔的托管頁沒有明示授權，不能用本專案 GPL 取代模型權利要求。詳見第三方聲明。
+
+
+## v0.2.0 新增
+
+- `VIDEO_ASPECT='16:9'`（832×480）或 `'9:16'`（480×832），兩種均提供 Mask 預覽；直式尚未 GPU 驗證。
+- `ENABLE_SUBTITLES=True` 產生依實際配音時間軸對齊的 `podcast.srt`；`BURN_SUBTITLES=True` 另輸出燒錄字幕 MP4。可指定中文字型與字型資料夾，原始 MP4 保留。
+- Python 3.12/3.13 安裝與半成品 venv 恢復、HF 快取復用與單檔損壞恢復。
+- 可設定總超時、無日誌進度超時及三種快取模式；失敗時停止本專案 ComfyUI，保留片段並提醒手動斷開 runtime。
+
+詳細修復對照、已知限制與回退方式：[v0.2.0 修改紀錄](docs/v0.2.0_changes.md)。沒有 L4 GPU 成功或效能比較的宣稱。

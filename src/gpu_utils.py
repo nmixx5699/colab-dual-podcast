@@ -12,7 +12,7 @@ def detect_gpu(low_vram=None):
     if memory < 20000:
         raise RuntimeError(f'{name}: {memory} MiB; this project requires an L4 24GB or larger GPU for testing')
     return {'name': name.strip(), 'memory_mib': memory,
-            'low_vram': memory < 35000 if low_vram is None else bool(low_vram)}
+            'low_vram': (memory < 35000 and 'L4' not in name.upper()) if low_vram is None else bool(low_vram)}
 
 
 def release_gpu():
@@ -20,3 +20,4 @@ def release_gpu():
     import torch
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+

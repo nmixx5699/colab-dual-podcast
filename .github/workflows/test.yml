@@ -3,12 +3,16 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
       - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
       - run: pip install -r requirements.txt
       - run: python -m compileall -q src scripts custom_nodes
       - run: python -m pytest -q
+

@@ -1,38 +1,15 @@
-# Colab 操作指南
+# v0.2.0 Colab 操作指南
 
-## 準備
+1. 在 Colab 左側「檔案」先上傳 `/content/hosts.png`、參考音（如使用），再執行 Notebook。第一格 `SOURCE='github'` 自動下載固定 SHA；`PROJECT_REF='main'` 可選最新版本。公開倉庫不需登入或 Token。
+2. 備用匯入：先上傳 `/content/project.zip`，設定 `SOURCE='zip'`。不會要求互動上傳。既有 PROJECT 會重用；切換版本請更名原始碼資料夾，保留 BASE 模型快取和 runs。
+3. 設定 `LOW_VRAM=None`，L4/A100 預設正常模式。真實 CUDA OOM 後伺服器會停止；改 True 可手動重跑。不能保證 L4 正常模式足夠。
+4. `CACHE_STRATEGY='disabled'` 保留舊 cache-none；另可選 default / low-memory。未經 L4 比較前不承諾速度改善。
+5. `VIDEO_ASPECT='16:9'` 或 `'9:16'`；提供相同比例的雙人圖片，檢查預覽保留完整雙臉與左右 Mask。直式仍待 GPU 測試。
+6. `MAX_ALLOWED_DURATION_SEC` 是上限；配音後顯示實際長度、上限、總幀數和段數，不會自動拉長配音。
+7. 可選字幕格：ENABLE_SUBTITLES 產生 SRT；BURN_SUBTITLES 另產生 podcast_subtitled.mp4。指定 SUBTITLE_FONT、SUBTITLE_FONT_SIZE、SUBTITLE_FONTS_DIR；中文字型可先安裝 `fonts-noto-cjk` 或上傳有中文字形的 .ttf/.otf。缺少 libass/字型時原始 MP4 仍保留。
+8. Notebook 可直接下載 MP4 和 SRT。字幕以 TTS 每句時間為邊界，不是逐字卡拉 OK。編輯 SRT 可再調整斷行。
+9. 參考音必須為本人或已取得授權，設定 REFERENCE_AUDIO_AUTHORIZED=True；這不是法律授權證明。不要拿未授權的他人錄音來克隆。
+10. 完成或失敗後，請手動至「執行階段 → 中斷連線並刪除執行階段」。停止 Python 程序不等於停止 GPU 計費。
 
-私人 repo 需登入有權限的 GitHub 帳號才能開啟 Colab GitHub 連結。若授權整合不可用，直接上傳 Notebook，第一格再上傳完整專案 ZIP。不要將 token 放在 URL 或分享的 Notebook。
+完整變更和 GPU 待驗收項目見 [v0.2.0_changes.md](v0.2.0_changes.md)。
 
-選 A100 40GB 為主要測試配置；L4 24GB 是低顯存候選。實測清單仍空白。程式拒絕低於約 20GB 的 GPU，GTX 1650 4GB 只能執行 CPU 測試。
-模型檔案約 29.7GB，另需 VoxCPM2、Python 套件與產出空間，建議預留至少 50GB；Drive 須有足夠容量。
-
-## 圖片及聲音
-
-- 上傳單張 `hosts.png`。A 左 B 右、兩人上半身、臉清晰、嘴無遮擋。避免交叉坐姿與跨越畫面中心。
-- 832×480 留邊縮放後檢視遮罩。紅色應只含 A、藍色只含 B；偏離中心時調整 MASK_SPLIT。
-- 自訂遮罩必須是輸出尺寸的灰階圖、白色為該人區域、黑色為其餘區域；兩張不得重疊。提供兩個路徑給 CUSTOM_MASKS。
-- VOICES 可分別給 description 或 reference。首次音色設計後會快取參考音；更改描述或種子會產生新的音色。兩人禁止使用相同參考音檔內容。
-- 開始前上傳聲音參考檔到指定位置，使用乾淨單人錄音。未提供參考音時，預設以虛構聲音描述設計。
-
-## 執行順序
-
-① ZIP → ② GPU／設定 → ③ 圖片遮罩預覽 → ④ 安裝及模型下載 → ⑤ 配音預覽 → ⑥ 影片 → ⑦ MP4 → ⑧ 人工驗收。
-TTS 由獨立程序運行，退出後才啟動 ComfyUI。失敗請看該 RUN_DIR 的 setup.log、tts.log、comfyui.log、errors.log。
-
-## 5 → 10–15 → 30–60 秒
-
-第一階段 STAGE_LIMIT_SEC=5，對話使用兩句短句，必要時依實際音長縮短。上限不會強制拉長／截斷音訊。
-通過人工驗收後換 RUN_NAME，再改上限至 10 或 15。最後增加對話量並使用 30／60。
-每次確認：兩人全程同框、A/B 正確對應、沒有明顯音畫漂移、聆聽者嘴型、人物與衣服是否一致、接縫是否突兀。
-數位靜音不能保證模型完全閉嘴。自然眨眼與點頭由 prompt 引導，不是可驗證的精確動作控制。
-
-## 保存及恢復
-
-USE_DRIVE=True 時，模型快取與 runs 放在 MyDrive/dual-podcast。Drive 掛載由 Colab 的正常授權流程完成。
-斷線但 runtime 還在：同一設定重跑⑥。
-換 runtime：重新匯入 ZIP、掛載 Drive、選相同 RUN_NAME 與設定，依序運行；模型及音訊快取會復用，片段以雜湊校驗。
-不要讓兩個 runtime 同時使用同一個 runs 子目錄。
-修改任何素材、參數或程式後換 RUN_NAME。若不用 Drive，下載整個 run 目錄才有恢復資料。
-
-下載確認完成後，在 Colab 中斷連線並刪除 runtime，避免持續占用資源。

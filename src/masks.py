@@ -24,6 +24,11 @@ def prepare_image_and_masks(image_path, output, width=832, height=480, split=0.5
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     # Letterbox preserves both people instead of cropping either face off-screen.
+    source = ImageOps.exif_transpose(Image.open(image_path))
+    ratio = source.width / source.height
+    if max(ratio / (width / height), (width / height) / ratio) > 1.4:
+        import warnings
+        warnings.warn('構圖比例與輸出不同：留邊保留雙臉，但人物可能過小。請提供相同比例素材並檢查預覽。')
     image = ImageOps.pad(ImageOps.exif_transpose(Image.open(image_path)).convert('RGB'),
                          (width, height), method=Image.Resampling.LANCZOS, color=(32, 32, 32))
     image.save(output / 'hosts.png')
@@ -41,3 +46,11 @@ def prepare_image_and_masks(image_path, output, width=832, height=480, split=0.5
     overlay[b > 0] = overlay[b > 0] * 0.65 + np.array([60, 120, 255]) * 0.35
     Image.fromarray(overlay.astype('uint8')).save(output / 'mask_preview.png')
     return output / 'hosts.png'
+
+
+
+def aspect_dimensions(aspect):
+    try:
+        return {'16:9': (832, 480), '9:16': (480, 832)}[aspect]
+    except KeyError:
+        raise ValueError('VIDEO_ASPECT must be 16:9 or 9:16') from None

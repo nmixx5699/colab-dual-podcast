@@ -11,6 +11,8 @@ def main():
     parser.add_argument('settings')
     args = parser.parse_args()
     settings = json.loads(Path(args.settings).read_text(encoding='utf-8'))
+    if any(v.get('reference') for v in settings['voices'].values()) and not settings.get('reference_audio_authorized', False):
+        raise ValueError('Reference recording must be your own or used with permission; confirm reference_audio_authorized explicitly')
     engine = VoiceEngine(Path(settings['cache']) / 'tts', str(Path(settings['cache']) / 'hf'))
     try:
         utterances = engine.synthesize(prepare_dialogue(settings['dialogue']), settings['voices'], settings['config']['seed'])
@@ -26,3 +28,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
