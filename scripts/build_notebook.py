@@ -30,7 +30,7 @@ from pathlib import Path
 import sys, os, zipfile, subprocess, urllib.request, tempfile, shutil
 PROJECT = Path('/content/colab-dual-podcast')
 SOURCE = 'github'  # github 或 zip；不會彈出互動上傳
-PROJECT_REF = 'fix/l4-stability-v0.2'  # 或 main；固定 SHA 可重現
+PROJECT_REF = '16c04c8e11dd3c6c0bfe1eddc7b15afb0375fc27'  # 或 main；固定 SHA 可重現
 ZIP_PATH = '/content/project.zip'  # zip 備用：先從左側檔案上傳
 if not (PROJECT / 'src/comfy_workflow.py').exists():
     archive_path = Path(ZIP_PATH)
